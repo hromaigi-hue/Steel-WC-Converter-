@@ -39,7 +39,7 @@ extraordinary_grades_dict = {
     "10ГН2МФА-ВД*": "10MnNi2MoVA-VD*",
     "АМг6": "AlMg6",
     "БрАЖН10-4-4": "CuAlFeNi10-4-4",
-    "БрАМц9-2": "CuAlMn9-2", # Исправлено согласно Приложению 5 (было CuA19Mn2)
+    "БрАМц9-2": "CuAlMn9-2", 
     "Сталь 20": "Steel 20",
     "Сталь 35": "Steel 35",
     "Сталь 45": "Steel 45",
@@ -89,15 +89,15 @@ def transliterate_steel(grade):
     return ''.join(trans_map.get(char, char) for char in grade)
 
 def transliterate_welding_material(grade):
-    if not grade.startswith("Св"):
-        if grade.startswith("Св"):
-             grade = "Св-" + grade[2:]
-        else:
-             return ''.join(only_trans_map.get(char, char) for char in grade)
-    
-    prefix = "Св-"
-    rest = grade[3:]
-    return "Sv-" + ''.join(trans_map.get(char, char) for char in rest)
+    if '-' not in grade[3:]:
+        return 'Sv-'+''.join(trans_map.get(char, char) for char in grade[3:])
+    else:
+        prefix = 'Sv-' # отделяем префикс
+        rest = grade[3:] # отделяем химию
+        dash_position = rest.index('-') # ищем разделитель, после которого пойдет фонетика
+        part_1 = ''.join(trans_map.get(char, char) for char in rest[:dash_position]) # транслитерируем по химии
+        part_2 = ''.join(only_trans_map.get(char, char) for char in rest[dash_position:]) # транслитерируем по фонетике
+        return prefix + part_1 + part_2 # собираем, отдаем
 
 def define_material(grade_list):
     new_grades_list = []
