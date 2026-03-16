@@ -25,29 +25,30 @@ st.title("Транслитерация марок стали и сварочны
 st.markdown("""
 Конвертация марок стали и сварочных материалов в соответствии требованиями ПНАЭГ. 
 Поддерживает ввод через запятую, точку с запятой, пробел или новую строку.
+Для корректной транслитерации следует вводить марки стали соблюдая верхний регистр.
 """)
 
-# --- ДАННЫЕ (Базовый список из dict_pnaeg.py, очищенный от лишних пробелов) ---
+# Списки, содержащие элементы для замены по химии
 
-russian_elements = ["Х", "Н", "Т", "С", "В", "М", "Г", "К", "Д", "Ф", "Б", "Л", "Р"]
-mendeleev_symbols = ["Cr", "Ni", "Ti", "Si", "Nb", "Mo", "Mn", "Co", "Cu", "V", "Nb", "L", "B"]
+russian_elements = ["Х", "Н", "Т", "С", "В", "М", "Г", "К", "Д", "Ф", "Б", "Л", "Р", 
+                    "х", "н", "т", "с", "в", "м", "г", "к", "д", "ф", "б", "л", "р"]
+mendeleev_symbols = ["Cr", "Ni", "Ti", "Si", "Nb", "Mo", "Mn", "Co", "Cu", "V", "Nb", "L", "B",
+                     "Cr", "Ni", "Ti", "Si", "Nb", "Mo", "Mn", "Co", "Cu", "V", "Nb", "L", "B"]
 
-# Словарь исключений (Только основные из исходного файла, пробелы удалены, опечатка в БрАМц исправлена на CuAlMn9-2 согласно логике, но в исходнике было CuA19Mn2 - оставим как в доке, если там так, но в доке CuAlMn9-2. В задании сказано удалить лишние, оставим базу)
-# Внимание: В файле dict_pnaeg.py было "CuA19Mn2", в Word документе "CuAlMn9-2". 
-# Так как задача - редактировать скрипт на основе документов, и в Word явно видно Al и цифры, я использую верное значение из Word.
+# Словарь исключений
 extraordinary_grades_dict = {
     "10ГН2МФА-ВД*": "10MnNi2MoVA-VD*",
     "АМг6": "AlMg6",
     "БрАЖН10-4-4": "CuAlFeNi10-4-4",
-    "БрАМц9-2": "CuAlMn9-2", 
+    "БрАМц9-2": "CuAlMn9-2",
     "Сталь 20": "Steel 20",
     "Сталь 35": "Steel 35",
     "Сталь 45": "Steel 45",
     "ХН35ВТ": "CrNi35WTi",
     "ХН77ТЮР": "CrNi77TiAlB",
-    "ПР-10Х18Н9М5С5Г4Б": "PR-10Cr18Ni9Mo5Si5Mn4Nb"
+    "ПР-10Х18Н9М5С5Г4Б": "AP-10Cr18Ni9Mo5Si5Mn4Nb",
+    "Урюпин": "Pitushara"
 }
-# Дополнительные случаи удалены по требованию пользователя.
 
 # Словарь фонетической транслитерации (без пробелов в значениях)
 only_trans_map = dict(zip(
@@ -86,11 +87,32 @@ def process_grade(grade):
 def transliterate_steel(grade):
     if grade in extraordinary_grades_dict:
         return extraordinary_grades_dict[grade]
-    return ''.join(trans_map.get(char, char) for char in grade)
+    elif '-' in grade:
+        dash_position = grade.index('-') # ищем разделитель, после которого пойдет фонетика
+        part_1 = ''.join(trans_map.get(char, char) for char in grade[:dash_position]) # транслитерируем по химии
+        part_2 = ''.join(only_trans_map.get(char, char) for char in grade[dash_position:]) # транслитерируем по фонетике
+        return part_1 + part_2 # собираем, отдаем
+    else:
+        return ''.join(trans_map.get(char, char) for char in grade)
 
 def transliterate_welding_material(grade):
     if '-' not in grade[3:]:
         return 'Sv-'+''.join(trans_map.get(char, char) for char in grade[3:])
+    elif '(' in grade:
+        prefix = 'Sv-' # отделяем префикс
+        rest = grade[3:] # отделяем химию
+        dash_position = rest.index('-') # ищем разделитель, после которого пойдет фонетика
+        bracket_position = rest.index('(') # ищем разделитель, после которого пойдет доп.сварочный
+        part_1 = ''.join(trans_map.get(char, char) for char in rest[:bracket_position]) # транслитерируем по химии
+        part_2 = ''.join(only_trans_map.get(char, char) for char in rest[dash_position:bracket_position])
+        if '-' in part_2: # транслитерируем по фонетике
+            new_dash_position = part_2.index('-')
+            part_3 = ''.join(trans_map.get(char, char) for char in rest[bracket_position+4:new_dash_position])
+            part_4 = ''.join(only_trans_map.get(char, char) for char in rest[new_dash_position:])
+            return prefix + part_1 + part_2 + '(' + prefix + part_3 + part_4
+        else:
+            part_2 = ''.join(trans_map.get(char, char) for char in rest[bracket_position+4:])
+            return prefix + part_1 + '(' + prefix + part_2
     else:
         prefix = 'Sv-' # отделяем префикс
         rest = grade[3:] # отделяем химию
@@ -138,7 +160,7 @@ user_input = st.text_area(
 if user_input:
     # Разбиваем ТОЛЬКО по запятым, точкам с запятой и новым строкам.
     # Пробелы внутри строк сохраняются, чтобы потом быть схлопнутыми функцией process_grade.
-    raw_items = re.split(r'[,\;]+|\n+', user_input)
+    raw_items = re.split(r'[,\;]+|\n+()', user_input)
     
     # Убираем пустые строки и лишние пробелы по краям каждого элемента
     original_input = [item.strip() for item in raw_items if item.strip()]
@@ -163,7 +185,7 @@ if user_input:
             
         elif project_choice == "Проект Пакш (English[Russian])":
             st.info("Формат: English[ClearedRussian]")
-            pairs = [f"{eng}[{rus}]" for eng, rus in zip(output, clean_originals)]
+            pairs = [f"{eng}({rus})" for eng, rus in zip(output, clean_originals)]
             result_text = ', '.join(pairs)
         
         st.code(result_text, language="text")
