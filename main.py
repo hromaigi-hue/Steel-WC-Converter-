@@ -37,7 +37,6 @@ mendeleev_symbols = ["Cr", "Ni", "Ti", "Si", "Nb", "Mo", "Mn", "Co", "Cu", "V", 
 
 # Словарь исключений
 extraordinary_grades_dict = {
-    "10ГН2МФА-ВД*": "10MnNi2MoVA-VD*",
     "АМг6": "AlMg6",
     "БрАЖН10-4-4": "CuAlFeNi10-4-4",
     "БрАМц9-2": "CuAlMn9-2",
@@ -160,7 +159,7 @@ user_input = st.text_area(
 if user_input:
     # Разбиваем ТОЛЬКО по запятым, точкам с запятой и новым строкам.
     # Пробелы внутри строк сохраняются, чтобы потом быть схлопнутыми функцией process_grade.
-    raw_items = re.split(r'[,\;]+|\n+()', user_input)
+    raw_items = re.split(r'[,\;]+|\n+', user_input)
     
     # Убираем пустые строки и лишние пробелы по краям каждого элемента
     original_input = [item.strip() for item in raw_items if item.strip()]
