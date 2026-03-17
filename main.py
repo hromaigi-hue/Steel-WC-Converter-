@@ -86,7 +86,7 @@ def process_grade(grade):
 def transliterate_steel(grade):
     if grade in extraordinary_grades_dict:
         return extraordinary_grades_dict[grade]
-    elif '-' in grade:
+    elif '-' in grade[3:]:
         dash_position = grade.index('-') # ищем разделитель, после которого пойдет фонетика
         part_1 = ''.join(trans_map.get(char, char) for char in grade[:dash_position]) # транслитерируем по химии
         part_2 = ''.join(only_trans_map.get(char, char) for char in grade[dash_position:]) # транслитерируем по фонетике
