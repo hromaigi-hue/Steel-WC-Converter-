@@ -66,6 +66,39 @@ trans_map.update(zip(russian_elements, mendeleev_symbols))
 
 # --- ФУНКЦИИ ОБРАБОТКИ ---
 
+def complex_trans(grade): # с помощью рекурсии (слава лекциям Хирьянова!) обрабатываем выражения в скобках (расчет, что их только 2)
+    if grade.startswith('Св-'):
+        return 'Sv-' + complex_trans(grade[3:])
+    
+    match grade: 
+        case grade if '(' in grade:
+            b_1 = grade.find('(') #ищем разделители
+            b_2 = grade.rfind(')')
+            
+            if b_2 == -1: # проверка от незакрытой скобки
+                if '-' in grade: # костыль. дублирует основную функцию. 
+                    dash_position = grade.index('-')
+                    part_1 = ''.join(trans_map.get(char, char) for char in grade[:dash_position])
+                    part_2 = ''.join(only_trans_map.get(char, char) for char in grade[dash_position:])
+                    return part_1 + part_2
+                else:
+                    return ''.join(trans_map.get(char, char) for char in grade)
+
+
+            grade_1 = complex_trans(grade[:b_1]) # до скобки            
+            grade_2 = complex_trans(grade[b_1+1:b_2]) # после скобки
+            
+            return grade_1 + '(' + grade_2 + ')' # объединение 
+             
+        case _:
+            if '-' in grade:
+                dash_position = grade.index('-')
+                part_1 = ''.join(trans_map.get(char, char) for char in grade[:dash_position])
+                part_2 = ''.join(only_trans_map.get(char, char) for char in grade[dash_position:])
+                return part_1 + part_2
+            else:
+                return ''.join(trans_map.get(char, char) for char in grade)
+
 def process_grade(grade):
     """
     Очищает строку: убирает пробелы по краям.
@@ -76,7 +109,7 @@ def process_grade(grade):
     if not grade:
         return ""
         
-    descriptive_starts = ("Сталь", "Круг", "Лист", "Труба", "Пруток", "Лак", "Смазка", "Состав", "Композиция")
+    descriptive_starts = ("Сталь", "Круг", "Лист", "Труба", "Пруток", "Лак", "Смазка", "Состав", "Композиция") # задел на будущее
     
     if grade.startswith(descriptive_starts):
         return " ".join(grade.split())
@@ -84,66 +117,50 @@ def process_grade(grade):
         return "".join(grade.split())
 
 def transliterate_steel(grade):
-    if grade in extraordinary_grades_dict:
-        return extraordinary_grades_dict[grade]
-    elif '-' in grade[3:]:
-        dash_position = grade.index('-') # ищем разделитель, после которого пойдет фонетика
-        part_1 = ''.join(trans_map.get(char, char) for char in grade[:dash_position]) # транслитерируем по химии
-        part_2 = ''.join(only_trans_map.get(char, char) for char in grade[dash_position:]) # транслитерируем по фонетике
-        return part_1 + part_2 # собираем, отдаем
-    else:
-        return ''.join(trans_map.get(char, char) for char in grade)
+    match grade:
+        case grade if grade in extraordinary_grades_dict:
+            return extraordinary_grades_dict[grade]
+        
+        case grade if '-' in grade:
+            return complex_trans(grade)
+        
+        case _:
+            return ''.join(trans_map.get(char, char) for char in grade)     
 
 def transliterate_welding_material(grade):
-    if '-' not in grade[3:]:
-        return 'Sv-'+''.join(trans_map.get(char, char) for char in grade[3:])
-    elif '(' in grade:
-        prefix = 'Sv-' # отделяем префикс
-        rest = grade[3:] # отделяем химию
-        dash_position = rest.index('-') # ищем разделитель, после которого пойдет фонетика
-        bracket_position = rest.index('(') # ищем разделитель, после которого пойдет доп.сварочный
-        part_1 = ''.join(trans_map.get(char, char) for char in rest[:bracket_position]) # транслитерируем по химии
-        part_2 = ''.join(only_trans_map.get(char, char) for char in rest[dash_position:bracket_position])
-        if '-' in part_2: # транслитерируем по фонетике
-            new_dash_position = part_2.index('-')
-            part_3 = ''.join(trans_map.get(char, char) for char in rest[bracket_position+4:new_dash_position])
-            part_4 = ''.join(only_trans_map.get(char, char) for char in rest[new_dash_position:])
-            return prefix + part_1 + part_2 + '(' + prefix + part_3 + part_4
-        else:
-            part_2 = ''.join(trans_map.get(char, char) for char in rest[bracket_position+4:])
-            return prefix + part_1 + '(' + prefix + part_2
-    else:
-        prefix = 'Sv-' # отделяем префикс
-        rest = grade[3:] # отделяем химию
-        dash_position = rest.index('-') # ищем разделитель, после которого пойдет фонетика
-        part_1 = ''.join(trans_map.get(char, char) for char in rest[:dash_position]) # транслитерируем по химии
-        part_2 = ''.join(only_trans_map.get(char, char) for char in rest[dash_position:]) # транслитерируем по фонетике
-        return prefix + part_1 + part_2 # собираем, отдаем
+    match grade:
+
+        case grade if '-' in grade[3:]:
+            return 'Sv-'+complex_trans(grade[3:])
+
+        case _:
+            return 'Sv-'+''.join(trans_map.get(char, char) for char in grade[3:])
+        
 
 def define_material(grade_list):
     new_grades_list = []
     original_clean_list = []
     
     for grade in grade_list:
-        new_grade = process_grade(grade)
-        if not new_grade:
-            continue
-            
-        original_clean_list.append(new_grade)
-        
-        if new_grade in extraordinary_grades_dict:
-            new_grades_list.append(extraordinary_grades_dict[new_grade])
-            continue
 
-        if new_grade[0].isdigit():
-            new_grades_list.append(transliterate_steel(new_grade))
-            continue
+        new_grade = process_grade(grade)
+        original_clean_list.append(new_grade)
+
+        match new_grade:
+            case new_grade if not new_grade:
+                continue
             
-        if new_grade.startswith("Св"):
-            new_grades_list.append(transliterate_welding_material(new_grade))
-            continue
+            case new_grade if new_grade in extraordinary_grades_dict:
+                new_grades_list.append(extraordinary_grades_dict[new_grade])
             
-        new_grades_list.append(''.join(only_trans_map.get(char, char) for char in new_grade))
+            case new_grade if new_grade[0].isdigit():
+                new_grades_list.append(transliterate_steel(new_grade))
+
+            case new_grade if new_grade.startswith(('Св-', 'св-')):
+                new_grades_list.append(transliterate_welding_material(new_grade))
+
+            case _:
+                new_grades_list.append(''.join(only_trans_map.get(char, char) for char in new_grade))       
         
     return new_grades_list, original_clean_list
 
