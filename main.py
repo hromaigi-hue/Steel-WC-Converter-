@@ -39,6 +39,8 @@ mendeleev_symbols = ["Cr", "Ni", "Ti", "Si", "Nb", "Mo", "Mn", "Co", "Cu", "V", 
 extraordinary_grades_dict = {
     "АМг6": "AlMg6",
     "БрАЖН10-4-4": "CuAlFeNi10-4-4",
+    "Св-10Х16Н25АМ6": "Sv-10Cr16Ni25NMo6",
+    "20-10Х17Н13М2Т": "20-10Cr17Ni13Mo2Ti",
     "БрАМц9-2": "CuAlMn9-2",
     "Сталь 20": "Steel 20",
     "Сталь 35": "Steel 35",
