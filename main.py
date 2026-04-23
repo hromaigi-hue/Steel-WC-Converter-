@@ -203,7 +203,7 @@ if user_input:
             
         elif project_choice == "Проект Пакш (English[Russian])":
             st.info("Формат: English[ClearedRussian]")
-            pairs = [f"{eng}({rus})" for eng, rus in zip(output, clean_originals)]
+            pairs = [f"{rus}({eng})" for rus, eng in zip(clean_originals, output)]
             result_text = ', '.join(pairs)
         
         st.code(result_text, language="text")
