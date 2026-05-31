@@ -48,7 +48,6 @@ extraordinary_grades_dict = {
     "ХН35ВТ": "CrNi35WTi",
     "ХН77ТЮР": "CrNi77TiAlB",
     "ПР-10Х18Н9М5С5Г4Б": "AP-10Cr18Ni9Mo5Si5Mn4Nb",
-    "Урюпин": "Pitushara"
 }
 
 # Словарь фонетической транслитерации (без пробелов в значениях)
@@ -68,7 +67,7 @@ trans_map.update(zip(russian_elements, mendeleev_symbols))
 
 # --- ФУНКЦИИ ОБРАБОТКИ ---
 
-def complex_trans(grade): # с помощью рекурсии (слава лекциям Хирьянова!) обрабатываем выражения в скобках (расчет, что их только 2)
+def complex_trans(grade): # с помощью рекурсии обрабатываем выражения в скобках (расчет, что их только 2)
     if grade.startswith('Св-'):
         return 'Sv-' + complex_trans(grade[3:])
     
@@ -166,6 +165,13 @@ def define_material(grade_list):
         
     return new_grades_list, original_clean_list
 
+def just_trans(line): #
+    if 'ё' in line:
+        line = line.replace('ё', 'e')
+    if 'Ё' in line:
+        line = line.replace('Ё', 'E')
+    return ''.join(only_trans_map.get(char, char) for char in line)
+
 # --- ИНТЕРФЕЙС STREAMLIT ---
 
 user_input = st.text_area(
@@ -191,7 +197,7 @@ if user_input:
         
         project_choice = st.radio(
             "Выберите формат вывода:",
-            ("Проект Эль-Дабаа (список)", "Проект Пакш (English[Russian])"),
+            ("Проект Эль-Дабаа (список)", "Проект Пакш (English[Russian])", "Транслитерация"),
             horizontal=True
         )
         
@@ -205,6 +211,10 @@ if user_input:
             st.info("Формат: English[ClearedRussian]")
             pairs = [f"{rus}({eng})" for rus, eng in zip(clean_originals, output)]
             result_text = ', '.join(pairs)
+
+        elif project_choice == "Транслитерация":
+            st.info("Просто транслитерация")
+            result_text = just_trans(user_input)
         
         st.code(result_text, language="text")
         st.success("Готово к копированию!")
